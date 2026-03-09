@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Chess Clock" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>Chess Clock</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111;
+      --border: #222;
+      --accent: #c8a84b;
+      --accent-dim: #7a6430;
+      --white: #f0ece0;
+      --danger: #c0392b;
+      --danger-glow: rgba(192, 57, 43, 0.4);
+      --active-bg: #141410;
+      --inactive-bg: #0a0a0a;
+      --inactive-text: #2a2a2a;
+
+      /* White player panel */
+      --white-panel-bg: #f5f2ea;
+      --white-panel-active-bg: #fffdf7;
+      --white-panel-inactive-text: #c8c4b8;
+      --white-panel-active-text: #111;
+      --white-panel-accent: #8a6f20;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'DM Mono', monospace;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      width: 100%;
+    }
+
+    /* ─── PLAYER PANELS ─── */
+    .player-panel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s;
+      overflow: hidden;
+    }
+
+    .player-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(200,168,75,0.05) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .player-panel.active::before { opacity: 1; }
+
+    /* Top player (black) - rotated 180deg for opponent across table */
+    #player-top {
+      background: var(--inactive-bg);
+      border-bottom: 1px solid var(--border);
+      flex-direction: column;
+    }
+
+    #player-bottom {
+      background: var(--white-panel-bg);
+      border-top: 1px solid #ddd;
+      flex-direction: column;
+    }
+
+    #player-bottom .player-label { color: var(--white-panel-inactive-text); }
+    #player-bottom .time-display { color: var(--white-panel-inactive-text); text-shadow: none; }
+    #player-bottom .moves-count { color: var(--white-panel-inactive-text); }
+    #player-bottom .tap-hint { color: var(--white-panel-inactive-text); }
+
+    #player-bottom.active { background: var(--white-panel-active-bg); }
+    #player-bottom.active .player-label { color: var(--white-panel-accent); }
+    #player-bottom.active .time-display { color: var(--white-panel-active-text); text-shadow: 0 0 40px rgba(0,0,0,0.06); }
+    #player-bottom.active .moves-count { color: var(--white-panel-accent); }
+    #player-bottom.active::before { background: radial-gradient(ellipse at center, rgba(138,111,32,0.07) 0%, transparent 70%); }
+
+    #player-bottom.out-of-time { background: #ffeaea !important; animation: danger-pulse-light 1s ease-in-out infinite; }
+    #player-bottom.out-of-time .time-display { color: var(--danger) !important; text-shadow: 0 0 30px var(--danger-glow) !important; }
+    #player-bottom.out-of-time .player-label { color: var(--danger) !important; }
+
+    @keyframes danger-pulse-light {
+      0%, 100% { background: #ffeaea; }
+      50% { background: #fff0f0; }
+    }
+
+    .player-panel.active {
+      background: var(--active-bg);
+    }
+
+    .player-panel.out-of-time {
+      background: #1a0000 !important;
+      animation: danger-pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes danger-pulse {
+      0%, 100% { background: #1a0000; }
+      50% { background: #200000; }
+    }
+
+    .player-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transform: rotate(var(--rot, 0deg));
+    }
+
+    #player-top .player-inner { --rot: 180deg; }
+
+    .player-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--inactive-text);
+      transition: color 0.2s;
+    }
+
+    .player-panel.active .player-label {
+      color: var(--accent-dim);
+    }
+
+    .player-panel.out-of-time .player-label {
+      color: var(--danger) !important;
+    }
+
+    .time-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(72px, 18vw, 130px);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: var(--inactive-text);
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+
+    .player-panel.active .time-display {
+      color: var(--white);
+      text-shadow: 0 0 40px rgba(240,236,224,0.15);
+    }
+
+    .player-panel.out-of-time .time-display {
+      color: var(--danger) !important;
+      text-shadow: 0 0 30px var(--danger-glow) !important;
+    }
+
+    .moves-count {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--inactive-text);
+      transition: color 0.2s;
+    }
+
+    .player-panel.active .moves-count {
+      color: var(--accent-dim);
+    }
+
+    .tap-hint {
+      position: absolute;
+      bottom: 20px;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: var(--inactive-text);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+
+    #player-top .tap-hint { bottom: auto; top: 20px; transform: rotate(180deg); }
+
+    .player-panel:not(.active):not(.out-of-time) .tap-hint {
+      opacity: 0.5;
+    }
+
+    /* ─── CENTER BAR ─── */
+    #center-bar {
+      height: 56px;
+      min-height: 56px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 10;
+    }
+
+    .center-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: #555;
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-radius: 2px;
+    }
+
+    .center-btn:hover, .center-btn:active {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .center-btn.primary {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+      font-size: 16px;
+      padding: 8px 20px;
+    }
+
+    .center-btn.primary:hover { background: rgba(200,168,75,0.08); }
+
+    #status-text {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #444;
+      text-transform: uppercase;
+      flex: 1;
+      text-align: center;
+    }
+
+    /* ─── SETTINGS OVERLAY ─── */
+    #settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    #settings-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .settings-panel {
+      width: min(420px, 92vw);
+      background: #0f0f0f;
+      border: 1px solid var(--border);
+      padding: 32px 28px;
+      transform: translateY(10px);
+      transition: transform 0.25s;
+    }
+
+    #settings-overlay.open .settings-panel { transform: translateY(0); }
+
+    .settings-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.1em;
+      color: var(--white);
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .settings-section label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .preset-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: #666;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      padding: 10px 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-radius: 2px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .preset-btn .preset-name {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .preset-btn .preset-time {
+      display: block;
+      color: #444;
+      font-size: 10px;
+    }
+
+    .preset-btn:hover, .preset-btn.selected {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+      background: rgba(200,168,75,0.06);
+    }
+
+    .preset-btn.selected .preset-time { color: var(--accent-dim); }
+
+    .custom-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .custom-row input {
+      background: #111;
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 8px 12px;
+      width: 70px;
+      border-radius: 2px;
+      text-align: center;
+    }
+
+    .custom-row input:focus {
+      outline: none;
+      border-color: var(--accent-dim);
+    }
+
+    .custom-row span {
+      font-size: 11px;
+      color: #444;
+    }
+
+    .settings-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .btn-apply {
+      flex: 1;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 0.1em;
+      padding: 12px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .btn-apply:hover { opacity: 0.85; }
+
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      color: #555;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-cancel:hover { border-color: #444; color: #888; }
+
+    /* ─── RIPPLE ─── */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(200,168,75,0.15);
+      transform: scale(0);
+      animation: ripple-anim 0.5s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes ripple-anim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* ─── FULLSCREEN PROMPT ─── */
+    #fs-prompt {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #111;
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 50;
+      transform: translateY(0);
+      transition: transform 0.3s;
+    }
+
+    #fs-prompt.hidden { transform: translateY(100%); }
+
+    #fs-prompt span { font-size: 11px; letter-spacing: 0.1em; color: #555; }
+
+    #fs-btn {
+      background: none;
+      border: 1px solid var(--accent-dim);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+
+    #fs-dismiss {
+      background: none;
+      border: none;
+      color: #333;
+      cursor: pointer;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Top player (Black / opponent) -->
+  <div class="player-panel" id="player-top" onclick="handleTap('top', event)">
+    <div class="player-inner">
+      <div class="player-label">Black</div>
+      <div class="time-display" id="time-top">5:00</div>
+      <div class="moves-count" id="moves-top">— moves</div>
+    </div>
+    <div class="tap-hint">TAP TO START</div>
+  </div>
+
+  <!-- Center control bar -->
+  <div id="center-bar">
+    <button class="center-btn" onclick="openSettings()">⚙ Settings</button>
+    <span id="status-text">Tap a player to begin</span>
+    <button class="center-btn primary" id="main-btn" onclick="handleMainBtn()">▶</button>
+  </div>
+
+  <!-- Bottom player (White) -->
+  <div class="player-panel" id="player-bottom" onclick="handleTap('bottom', event)">
+    <div class="player-inner">
+      <div class="player-label">White</div>
+      <div class="time-display" id="time-bottom">5:00</div>
+      <div class="moves-count" id="moves-bottom">— moves</div>
+    </div>
+    <div class="tap-hint">TAP TO START</div>
+  </div>
+</div>
+
+<!-- Settings overlay -->
+<div id="settings-overlay">
+  <div class="settings-panel">
+    <div class="settings-title">Clock Settings</div>
+
+    <div class="settings-section">
+      <label>Time Control Presets</label>
+      <div class="preset-grid" id="preset-grid"></div>
+    </div>
+
+    <div class="settings-section">
+      <label>Custom Time (minutes + increment seconds)</label>
+      <div class="custom-row">
+        <input type="number" id="custom-min" min="1" max="180" value="5" />
+        <span>min +</span>
+        <input type="number" id="custom-inc" min="0" max="60" value="0" />
+        <span>sec</span>
+      </div>
+    </div>
+
+    <div class="settings-actions">
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn-apply" onclick="applySettings()">Apply & Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fullscreen prompt -->
+<div id="fs-prompt">
+  <span>Add to home screen for best experience</span>
+  <button id="fs-btn" onclick="requestFullscreen()">Fullscreen</button>
+  <button id="fs-dismiss" onclick="dismissFsPrompt()">✕</button>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────
+const PRESETS = [
+  { name: 'Bullet', label: '1 min',    time: 60,   inc: 0 },
+  { name: 'Bullet',  label: '2+1',      time: 120,  inc: 1 },
+  { name: 'Blitz',  label: '3 min',    time: 180,  inc: 0 },
+  { name: 'Blitz',  label: '3+2',      time: 180,  inc: 2 },
+  { name: 'Rapid',  label: '5 min',    time: 300,  inc: 0, default: true },
+  { name: 'Rapid',  label: '10 min',   time: 600,  inc: 0 },
+  { name: 'Rapid',  label: '10+5',     time: 600,  inc: 5 },
+  { name: 'Classic',label: '15+10',    time: 900,  inc: 10 },
+  { name: 'Classic',label: '30 min',   time: 1800, inc: 0 },
+];
+
+let state = {
+  topTime: 300,
+  bottomTime: 300,
+  topMoves: 0,
+  bottomMoves: 0,
+  activePlayer: null,   // 'top' | 'bottom' | null
+  phase: 'idle',        // 'idle' | 'running' | 'paused' | 'ended'
+  increment: 0,
+  baseTime: 300,
+  selectedPreset: 4,    // default: 5 min
+  interval: null,
+  lastTick: null,
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────
+function init() {
+  buildPresetGrid();
+  applyPreset(state.selectedPreset);
+  render();
+  hideFsPromptIfInstalled();
+
+  // Keep screen awake via Wake Lock API
+  requestWakeLock();
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+// ─── WAKE LOCK ────────────────────────────────────────────────────
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+
+// ─── PRESET GRID ─────────────────────────────────────────────────
+function buildPresetGrid() {
+  const grid = document.getElementById('preset-grid');
+  grid.innerHTML = '';
+  PRESETS.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn' + (i === state.selectedPreset ? ' selected' : '');
+    btn.innerHTML = `<span class="preset-name">${p.name}</span><span class="preset-time">${p.label}</span>`;
+    btn.onclick = () => selectPreset(i);
+    grid.appendChild(btn);
+  });
+}
+
+function selectPreset(i) {
+  state.selectedPreset = i;
+  const p = PRESETS[i];
+  document.getElementById('custom-min').value = Math.floor(p.time / 60);
+  document.getElementById('custom-inc').value = p.inc;
+  document.querySelectorAll('.preset-btn').forEach((b, j) => {
+    b.classList.toggle('selected', j === i);
+  });
+}
+
+function applyPreset(i) {
+  const p = PRESETS[i];
+  state.baseTime = p.time;
+  state.increment = p.inc;
+  state.topTime = p.time;
+  state.bottomTime = p.time;
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────────
+function openSettings() {
+  if (state.phase === 'running') pauseGame();
+  buildPresetGrid();
+  document.getElementById('custom-min').value = Math.floor(state.baseTime / 60);
+  document.getElementById('custom-inc').value = state.increment;
+  document.getElementById('settings-overlay').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+function applySettings() {
+  const mins = parseInt(document.getElementById('custom-min').value) || 5;
+  const inc  = parseInt(document.getElementById('custom-inc').value) || 0;
+  state.baseTime = Math.max(30, mins * 60);
+  state.increment = Math.max(0, inc);
+  resetGame();
+  closeSettings();
+}
+
+// ─── GAME LOGIC ───────────────────────────────────────────────────
+function handleTap(player, e) {
+  addRipple(e);
+
+  if (state.phase === 'ended') return;
+
+  // First tap = start game, that player's opponent starts counting
+  if (state.phase === 'idle') {
+    startGame(player);
+    return;
+  }
+
+  if (state.phase === 'paused') {
+    // Resume with this player active? Only if it was their turn
+    if (state.activePlayer === player) resumeGame();
+    return;
+  }
+
+  if (state.phase === 'running') {
+    if (state.activePlayer !== player) return; // not their turn
+    switchPlayer(player);
+  }
+}
+
+function startGame(tappedPlayer) {
+  // The person who taps has just moved; opponent's clock starts
+  const opponent = tappedPlayer === 'top' ? 'bottom' : 'top';
+  state.activePlayer = opponent;
+  state.phase = 'running';
+  startTick();
+  render();
+}
+
+function switchPlayer(currentPlayer) {
+  // Add increment to player who just moved
+  if (state.increment > 0) {
+    if (currentPlayer === 'top') state.topTime += state.increment;
+    else state.bottomTime += state.increment;
+  }
+
+  // Count move
+  if (currentPlayer === 'top') state.topMoves++;
+  else state.bottomMoves++;
+
+  state.activePlayer = currentPlayer === 'top' ? 'bottom' : 'top';
+  render();
+}
+
+function pauseGame() {
+  state.phase = 'paused';
+  stopTick();
+  render();
+}
+
+function resumeGame() {
+  state.phase = 'running';
+  startTick();
+  render();
+}
+
+function resetGame() {
+  stopTick();
+  state.topTime = state.baseTime;
+  state.bottomTime = state.baseTime;
+  state.topMoves = 0;
+  state.bottomMoves = 0;
+  state.activePlayer = null;
+  state.phase = 'idle';
+  render();
+}
+
+function handleMainBtn() {
+  if (state.phase === 'idle') return; // nothing to do yet
+  if (state.phase === 'running') pauseGame();
+  else if (state.phase === 'paused') resumeGame();
+  else if (state.phase === 'ended') resetGame();
+}
+
+// ─── TICK ─────────────────────────────────────────────────────────
+function startTick() {
+  state.lastTick = Date.now();
+  state.interval = setInterval(tick, 100);
+}
+
+function stopTick() {
+  if (state.interval) { clearInterval(state.interval); state.interval = null; }
+}
+
+function tick() {
+  const now = Date.now();
+  const dt = (now - state.lastTick) / 1000;
+  state.lastTick = now;
+
+  if (state.activePlayer === 'top') {
+    state.topTime = Math.max(0, state.topTime - dt);
+    if (state.topTime === 0) endGame('top');
+  } else if (state.activePlayer === 'bottom') {
+    state.bottomTime = Math.max(0, state.bottomTime - dt);
+    if (state.bottomTime === 0) endGame('bottom');
+  }
+
+  renderTimes();
+}
+
+function endGame(loser) {
+  stopTick();
+  state.phase = 'ended';
+  state.activePlayer = loser; // highlight loser
+  render();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────
+function render() {
+  renderTimes();
+
+  const topPanel = document.getElementById('player-top');
+  const botPanel = document.getElementById('player-bottom');
+  const statusEl = document.getElementById('status-text');
+  const mainBtn  = document.getElementById('main-btn');
+
+  // Classes
+  topPanel.classList.remove('active', 'out-of-time');
+  botPanel.classList.remove('active', 'out-of-time');
+
+  if (state.phase === 'running') {
+    if (state.activePlayer === 'top') topPanel.classList.add('active');
+    else botPanel.classList.add('active');
+  }
+
+  if (state.phase === 'ended') {
+    if (state.activePlayer === 'top') topPanel.classList.add('out-of-time');
+    else botPanel.classList.add('out-of-time');
+  }
+
+  // Status text
+  const phaseMap = {
+    idle:    'Tap a player to begin',
+    running: state.activePlayer === 'top' ? '● Black to move' : '● White to move',
+    paused:  'Paused — tap to resume',
+    ended:   (state.activePlayer === 'top' ? 'Black' : 'White') + ' ran out of time!',
+  };
+  statusEl.textContent = phaseMap[state.phase] || '';
+
+  // Main button
+  const btnMap = { idle: '▶', running: '⏸', paused: '▶', ended: '↺' };
+  mainBtn.textContent = btnMap[state.phase] || '▶';
+
+  // Move counts
+  document.getElementById('moves-top').textContent =
+    state.topMoves > 0 ? `${state.topMoves} move${state.topMoves !== 1 ? 's' : ''}` : '— moves';
+  document.getElementById('moves-bottom').textContent =
+    state.bottomMoves > 0 ? `${state.bottomMoves} move${state.bottomMoves !== 1 ? 's' : ''}` : '— moves';
+}
+
+function renderTimes() {
+  document.getElementById('time-top').textContent    = formatTime(state.topTime);
+  document.getElementById('time-bottom').textContent = formatTime(state.bottomTime);
+}
+
+function formatTime(secs) {
+  secs = Math.ceil(secs);
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  if (secs >= 3600) {
+    const h = Math.floor(secs / 3600);
+    return `${h}:${String(m % 60).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// ─── RIPPLE EFFECT ────────────────────────────────────────────────
+function addRipple(e) {
+  const panel = e.currentTarget;
+  const r = document.createElement('div');
+  r.className = 'ripple';
+  const rect = panel.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  const size = Math.max(rect.width, rect.height);
+  r.style.cssText = `width:${size}px;height:${size}px;left:${x - size/2}px;top:${y - size/2}px`;
+  panel.appendChild(r);
+  setTimeout(() => r.remove(), 600);
+}
+
+// ─── FULLSCREEN ───────────────────────────────────────────────────
+function requestFullscreen() {
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  dismissFsPrompt();
+}
+
+function dismissFsPrompt() {
+  document.getElementById('fs-prompt').classList.add('hidden');
+  localStorage.setItem('fs-dismissed', '1');
+}
+
+function hideFsPromptIfInstalled() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone;
+  const dismissed = localStorage.getItem('fs-dismissed');
+  if (isStandalone || dismissed) {
+    document.getElementById('fs-prompt').classList.add('hidden');
+  }
+}
+
+// ─── START ────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
