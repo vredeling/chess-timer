@@ -32,12 +32,12 @@
       --danger-glow: rgba(192, 57, 43, 0.4);
       --active-bg: #141410;
       --inactive-bg: #0a0a0a;
-      --inactive-text: #2a2a2a;
+      --inactive-text: #484848;
 
       /* White player panel */
       --white-panel-bg: #f5f2ea;
       --white-panel-active-bg: #fffdf7;
-      --white-panel-inactive-text: #c8c4b8;
+      --white-panel-inactive-text: #a8a49a;
       --white-panel-active-text: #111;
       --white-panel-accent: #8a6f20;
     }
@@ -99,7 +99,7 @@
     #player-bottom .player-label { color: var(--white-panel-inactive-text); }
     #player-bottom .time-display { color: var(--white-panel-inactive-text); text-shadow: none; }
     #player-bottom .moves-count { color: var(--white-panel-inactive-text); }
-    #player-bottom .tap-hint { color: var(--white-panel-inactive-text); }
+    #player-bottom .tap-hint { color: #888; }
 
     #player-bottom.active { background: var(--white-panel-active-bg); }
     #player-bottom.active .player-label { color: var(--white-panel-accent); }
@@ -178,7 +178,7 @@
     }
 
     .moves-count {
-      font-size: 11px;
+      font-size: 14px;
       letter-spacing: 0.2em;
       color: var(--inactive-text);
       transition: color 0.2s;
@@ -193,7 +193,7 @@
       bottom: 20px;
       font-size: 10px;
       letter-spacing: 0.25em;
-      color: var(--inactive-text);
+      color: #888;
       opacity: 0;
       transition: opacity 0.4s;
     }
@@ -201,7 +201,7 @@
     #player-top .tap-hint { bottom: auto; top: 20px; transform: rotate(180deg); }
 
     .player-panel:not(.active):not(.out-of-time) .tap-hint {
-      opacity: 0.5;
+      opacity: 0.85;
     }
 
     /* ─── CENTER BAR ─── */
@@ -222,8 +222,8 @@
 
     .center-btn {
       background: none;
-      border: 1px solid var(--border);
-      color: #555;
+      border: 1px solid #3a3a3a;
+      color: #aaa;
       font-family: 'DM Mono', monospace;
       font-size: 10px;
       letter-spacing: 0.2em;
@@ -232,6 +232,10 @@
       cursor: pointer;
       transition: all 0.15s;
       border-radius: 2px;
+      white-space: nowrap;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
     }
 
     .center-btn:hover, .center-btn:active {
@@ -251,10 +255,30 @@
     #status-text {
       font-size: 10px;
       letter-spacing: 0.2em;
-      color: #444;
+      color: #999;
       text-transform: uppercase;
       flex: 1;
       text-align: center;
+    }
+
+    #center-bar.game-active .side-btn {
+      display: none;
+    }
+
+    #center-bar.game-active #status-text {
+      text-align: left;
+    }
+
+    #reset-btn {
+      display: none;
+    }
+
+    #center-bar.game-paused #reset-btn {
+      display: inline-flex;
+    }
+
+    #center-bar.game-paused #status-text {
+      display: none;
     }
 
     /* ─── SETTINGS OVERLAY ─── */
@@ -304,9 +328,9 @@
 
     .settings-section label {
       display: block;
-      font-size: 10px;
+      font-size: 12px;
       letter-spacing: 0.3em;
-      color: #555;
+      color: #aaa;
       text-transform: uppercase;
       margin-bottom: 10px;
     }
@@ -319,10 +343,10 @@
 
     .preset-btn {
       background: none;
-      border: 1px solid var(--border);
-      color: #666;
+      border: 1px solid #3a3a3a;
+      color: #bbb;
       font-family: 'DM Mono', monospace;
-      font-size: 11px;
+      font-size: 13px;
       padding: 10px 6px;
       cursor: pointer;
       transition: all 0.15s;
@@ -333,7 +357,7 @@
 
     .preset-btn .preset-name {
       display: block;
-      font-size: 10px;
+      font-size: 12px;
       letter-spacing: 0.15em;
       text-transform: uppercase;
       margin-bottom: 2px;
@@ -341,8 +365,8 @@
 
     .preset-btn .preset-time {
       display: block;
-      color: #444;
-      font-size: 10px;
+      color: #999;
+      font-size: 12px;
     }
 
     .preset-btn:hover, .preset-btn.selected {
@@ -378,8 +402,8 @@
     }
 
     .custom-row span {
-      font-size: 11px;
-      color: #444;
+      font-size: 13px;
+      color: #aaa;
     }
 
     .settings-actions {
@@ -405,8 +429,8 @@
 
     .btn-cancel {
       background: none;
-      border: 1px solid var(--border);
-      color: #555;
+      border: 1px solid #3a3a3a;
+      color: #bbb;
       font-family: 'DM Mono', monospace;
       font-size: 11px;
       letter-spacing: 0.15em;
@@ -415,7 +439,92 @@
       transition: all 0.15s;
     }
 
-    .btn-cancel:hover { border-color: #444; color: #888; }
+    .btn-cancel:hover { border-color: #555; color: #bbb; }
+
+    /* ─── HELP OVERLAY ─── */
+    #help-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    #help-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .help-panel {
+      width: min(380px, 92vw);
+      background: #0f0f0f;
+      border: 1px solid var(--border);
+      padding: 32px 28px;
+      transform: translateY(10px);
+      transition: transform 0.25s;
+    }
+
+    #help-overlay.open .help-panel { transform: translateY(0); }
+
+    .help-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.1em;
+      color: var(--white);
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .help-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .help-item-icon {
+      font-size: 16px;
+      min-width: 24px;
+      text-align: center;
+      margin-top: 1px;
+    }
+
+    .help-item-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #aaa;
+      letter-spacing: 0.03em;
+    }
+
+    .help-item-text strong {
+      color: var(--white);
+      font-weight: 500;
+    }
+
+    .help-close {
+      margin-top: 24px;
+      width: 100%;
+      background: none;
+      border: 1px solid #3a3a3a;
+      color: #aaa;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-radius: 2px;
+    }
+
+    .help-close:hover { border-color: #555; color: #ccc; }
 
     /* ─── RIPPLE ─── */
     .ripple {
@@ -450,7 +559,7 @@
 
     #fs-prompt.hidden { transform: translateY(100%); }
 
-    #fs-prompt span { font-size: 11px; letter-spacing: 0.1em; color: #555; }
+    #fs-prompt span { font-size: 11px; letter-spacing: 0.1em; color: #999; }
 
     #fs-btn {
       background: none;
@@ -466,7 +575,8 @@
     #fs-dismiss {
       background: none;
       border: none;
-      color: #333;
+      color: #777;
+      margin-left: 16px;
       cursor: pointer;
       font-size: 16px;
     }
@@ -486,8 +596,10 @@
 
   <!-- Center control bar -->
   <div id="center-bar">
-    <button class="center-btn" onclick="openSettings()">⚙ Settings</button>
+    <button class="center-btn side-btn" onclick="openSettings()">⚙ Settings</button>
+    <button class="center-btn side-btn" onclick="openHelp()">?</button>
     <span id="status-text">Tap a player to begin</span>
+    <button class="center-btn" id="reset-btn" onclick="resetGame()">↺ Reset</button>
     <button class="center-btn primary" id="main-btn" onclick="handleMainBtn()">▶</button>
   </div>
 
@@ -499,6 +611,30 @@
       <div class="moves-count" id="moves-bottom">— moves</div>
     </div>
     <div class="tap-hint">TAP TO START</div>
+  </div>
+</div>
+
+<!-- Help overlay -->
+<div id="help-overlay">
+  <div class="help-panel">
+    <div class="help-title">How to Play</div>
+    <div class="help-item">
+      <span class="help-item-icon">✋</span>
+      <span class="help-item-text"><strong>Tap your panel</strong> after making a move — your clock stops and your opponent's starts.</span>
+    </div>
+    <div class="help-item">
+      <span class="help-item-icon">▶</span>
+      <span class="help-item-text"><strong>First tap</strong> on either panel starts the game. That player's opponent begins counting down.</span>
+    </div>
+    <div class="help-item">
+      <span class="help-item-icon">⏸</span>
+      <span class="help-item-text"><strong>Center button</strong> pauses and resumes the clock mid-game.</span>
+    </div>
+    <div class="help-item">
+      <span class="help-item-icon">+</span>
+      <span class="help-item-text"><strong>Increment</strong> (if set) is added to your time after each move.</span>
+    </div>
+    <button class="help-close" onclick="closeHelp()">Got it</button>
   </div>
 </div>
 
@@ -580,6 +716,51 @@ function init() {
   }
 }
 
+// ─── AUDIO ────────────────────────────────────────────────────────
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playStartSound() {
+  if (!audioCtx) return;
+  const osc  = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(440, t);
+  osc.frequency.linearRampToValueAtTime(660, t + 0.12);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.2, t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+  osc.start(t);
+  osc.stop(t + 0.25);
+}
+
+function playTimeoutSound() {
+  if (!audioCtx) return;
+  const notes = [660, 520, 390];
+  notes.forEach((freq, i) => {
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const t = audioCtx.currentTime + i * 0.22;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.28, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t);
+    osc.stop(t + 0.35);
+  });
+}
+
 // ─── WAKE LOCK ────────────────────────────────────────────────────
 let wakeLock = null;
 async function requestWakeLock() {
@@ -625,6 +806,16 @@ function applyPreset(i) {
   state.bottomTime = p.time;
 }
 
+// ─── HELP ─────────────────────────────────────────────────────────
+function openHelp() {
+  if (state.phase === 'running') pauseGame();
+  document.getElementById('help-overlay').classList.add('open');
+}
+
+function closeHelp() {
+  document.getElementById('help-overlay').classList.remove('open');
+}
+
 // ─── SETTINGS ─────────────────────────────────────────────────────
 function openSettings() {
   if (state.phase === 'running') pauseGame();
@@ -649,6 +840,7 @@ function applySettings() {
 
 // ─── GAME LOGIC ───────────────────────────────────────────────────
 function handleTap(player, e) {
+  initAudio();
   addRipple(e);
 
   if (state.phase === 'ended') return;
@@ -678,6 +870,7 @@ function startGame(tappedPlayer) {
   state.phase = 'running';
   startTick();
   render();
+  playStartSound();
 }
 
 function switchPlayer(currentPlayer) {
@@ -756,6 +949,7 @@ function endGame(loser) {
   state.phase = 'ended';
   state.activePlayer = loser; // highlight loser
   render();
+  playTimeoutSound();
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────
@@ -766,6 +960,11 @@ function render() {
   const botPanel = document.getElementById('player-bottom');
   const statusEl = document.getElementById('status-text');
   const mainBtn  = document.getElementById('main-btn');
+
+  // Center bar mode
+  const bar = document.getElementById('center-bar');
+  bar.classList.toggle('game-active', state.phase === 'running');
+  bar.classList.toggle('game-paused', state.phase === 'paused');
 
   // Classes
   topPanel.classList.remove('active', 'out-of-time');
@@ -785,7 +984,7 @@ function render() {
   const phaseMap = {
     idle:    'Tap a player to begin',
     running: state.activePlayer === 'top' ? '● Black to move' : '● White to move',
-    paused:  'Paused — tap to resume',
+    paused:  '',
     ended:   (state.activePlayer === 'top' ? 'Black' : 'White') + ' ran out of time!',
   };
   statusEl.textContent = phaseMap[state.phase] || '';
