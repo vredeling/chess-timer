@@ -6,9 +6,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Chess Clock" />
+  <meta name="apple-mobile-web-app-title" content="Chess Timer" />
   <meta name="theme-color" content="#0a0a0a" />
-  <title>Chess Clock</title>
+  <title>Chess Timer</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png" />
@@ -58,6 +58,10 @@
       grid-template-rows: 1fr auto 1fr;
       height: 100dvh;
       width: 100%;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
     }
 
     /* ─── PLAYER PANELS ─── */
@@ -691,7 +695,7 @@
     <div class="help-title">How to Play</div>
     <div class="help-item">
       <span class="help-item-icon">♟</span>
-      <span class="help-item-text">Place your phone next to the board. <strong>Tap Black</strong> to start the game — Black's clock begins counting down.</span>
+      <span class="help-item-text">Place your phone next to the board. <strong>Tap Black</strong> to start the game — White's clock begins counting down.</span>
     </div>
     <div class="help-item">
       <span class="help-item-icon">↕</span>
