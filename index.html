@@ -54,15 +54,15 @@
     }
 
     #app {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-rows: 1fr auto 1fr;
       height: 100dvh;
       width: 100%;
     }
 
     /* ─── PLAYER PANELS ─── */
     .player-panel {
-      flex: 1;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -88,12 +88,14 @@
       background: var(--inactive-bg);
       border-bottom: 1px solid var(--border);
       flex-direction: column;
+      align-self: stretch;
     }
 
     #player-bottom {
       background: var(--white-panel-bg);
       border-top: 1px solid #ddd;
       flex-direction: column;
+      align-self: stretch;
     }
 
     #player-bottom .player-label { color: var(--white-panel-inactive-text); }
@@ -311,6 +313,7 @@
     }
 
     #settings-overlay.open .settings-panel { transform: translateY(0); }
+    #settings-overlay.no-interact .settings-panel { pointer-events: none; }
 
     .settings-title {
       font-family: 'Bebas Neue', sans-serif;
@@ -406,6 +409,72 @@
       color: #aaa;
     }
 
+    .settings-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .settings-toggle-row label {
+      font-size: 12px;
+      letter-spacing: 0.3em;
+      color: #aaa;
+      text-transform: uppercase;
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: #666;
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .toggle-switch input:checked + .toggle-track {
+      background: rgba(200,168,75,0.15);
+      border-color: var(--accent-dim);
+    }
+
+    .toggle-switch input:checked + .toggle-track::after {
+      transform: translateX(16px);
+      background: var(--accent);
+    }
+
     .settings-actions {
       display: flex;
       gap: 10px;
@@ -471,6 +540,7 @@
     }
 
     #help-overlay.open .help-panel { transform: translateY(0); }
+    #help-overlay.no-interact .help-panel { pointer-events: none; }
 
     .help-title {
       font-family: 'Bebas Neue', sans-serif;
@@ -494,6 +564,7 @@
       min-width: 24px;
       text-align: center;
       margin-top: 1px;
+      color: var(--accent);
     }
 
     .help-item-text {
@@ -619,20 +690,20 @@
   <div class="help-panel">
     <div class="help-title">How to Play</div>
     <div class="help-item">
-      <span class="help-item-icon">✋</span>
-      <span class="help-item-text"><strong>Tap your panel</strong> after making a move — your clock stops and your opponent's starts.</span>
+      <span class="help-item-icon">♟</span>
+      <span class="help-item-text">Place your phone next to the board. <strong>Tap Black</strong> to start the game — Black's clock begins counting down.</span>
     </div>
     <div class="help-item">
-      <span class="help-item-icon">▶</span>
-      <span class="help-item-text"><strong>First tap</strong> on either panel starts the game. That player's opponent begins counting down.</span>
+      <span class="help-item-icon">↕</span>
+      <span class="help-item-text">After each move, <strong>tap your side</strong> to stop your clock and start your opponent's.</span>
     </div>
     <div class="help-item">
-      <span class="help-item-icon">⏸</span>
-      <span class="help-item-text"><strong>Center button</strong> pauses and resumes the clock mid-game.</span>
+      <span class="help-item-icon">⚙</span>
+      <span class="help-item-text">Use <strong>Settings</strong> to pick a time control or set a custom time with increment.</span>
     </div>
     <div class="help-item">
-      <span class="help-item-icon">+</span>
-      <span class="help-item-text"><strong>Increment</strong> (if set) is added to your time after each move.</span>
+      <span class="help-item-icon">↺</span>
+      <span class="help-item-text"><strong>Pause</strong> mid-game if needed, then <strong>Reset</strong> to start a fresh game.</span>
     </div>
     <button class="help-close" onclick="closeHelp()">Got it</button>
   </div>
@@ -655,6 +726,14 @@
         <span>min +</span>
         <input type="number" id="custom-inc" min="0" max="60" value="0" />
         <span>sec</span>
+      </div>
+    </div>
+
+    <div class="settings-toggle-row">
+      <label for="mute-toggle">Sound</label>
+      <div class="toggle-switch">
+        <input type="checkbox" id="mute-toggle" onchange="state.muted = !this.checked" />
+        <span class="toggle-track"></span>
       </div>
     </div>
 
@@ -698,6 +777,7 @@ let state = {
   selectedPreset: 4,    // default: 5 min
   interval: null,
   lastTick: null,
+  muted: false,
 };
 
 // ─── INIT ─────────────────────────────────────────────────────────
@@ -726,7 +806,7 @@ function initAudio() {
 }
 
 function playStartSound() {
-  if (!audioCtx) return;
+  if (!audioCtx || state.muted) return;
   const osc  = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain);
@@ -743,7 +823,7 @@ function playStartSound() {
 }
 
 function playTimeoutSound() {
-  if (!audioCtx) return;
+  if (!audioCtx || state.muted) return;
   const notes = [660, 520, 390];
   notes.forEach((freq, i) => {
     const osc  = audioCtx.createOscillator();
@@ -809,7 +889,9 @@ function applyPreset(i) {
 // ─── HELP ─────────────────────────────────────────────────────────
 function openHelp() {
   if (state.phase === 'running') pauseGame();
-  document.getElementById('help-overlay').classList.add('open');
+  const overlay = document.getElementById('help-overlay');
+  overlay.classList.add('open', 'no-interact');
+  setTimeout(() => overlay.classList.remove('no-interact'), 400);
 }
 
 function closeHelp() {
@@ -822,7 +904,10 @@ function openSettings() {
   buildPresetGrid();
   document.getElementById('custom-min').value = Math.floor(state.baseTime / 60);
   document.getElementById('custom-inc').value = state.increment;
-  document.getElementById('settings-overlay').classList.add('open');
+  document.getElementById('mute-toggle').checked = !state.muted;
+  const overlay = document.getElementById('settings-overlay');
+  overlay.classList.add('open', 'no-interact');
+  setTimeout(() => overlay.classList.remove('no-interact'), 400);
 }
 
 function closeSettings() {
@@ -886,6 +971,7 @@ function switchPlayer(currentPlayer) {
 
   state.activePlayer = currentPlayer === 'top' ? 'bottom' : 'top';
   render();
+  playStartSound();
 }
 
 function pauseGame() {
@@ -990,7 +1076,7 @@ function render() {
   statusEl.textContent = phaseMap[state.phase] || '';
 
   // Main button
-  const btnMap = { idle: '▶', running: '⏸', paused: '▶', ended: '↺' };
+  const btnMap = { idle: '▶', running: '⏸\uFE0E', paused: '▶', ended: '↺' };
   mainBtn.textContent = btnMap[state.phase] || '▶';
 
   // Move counts
