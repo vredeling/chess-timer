@@ -1,6 +1,6 @@
 {
-  "name": "Chess Clock",
-  "short_name": "Chess Clock",
+  "name": "Chess Timer",
+  "short_name": "Chess Timer",
   "description": "A beautiful chess timer for over-the-board play",
   "start_url": "./index.html",
   "display": "fullscreen",
