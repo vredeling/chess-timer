@@ -1,4 +1,6 @@
-const CACHE = 'chess-clock-v1';
+importScripts('./version.js');
+
+const CACHE = `chess-clock-${VERSION}`;
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
