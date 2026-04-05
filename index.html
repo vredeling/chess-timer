@@ -206,7 +206,7 @@
 
     #player-top .tap-hint { bottom: auto; top: 20px; transform: rotate(180deg); }
 
-    .player-panel:not(.active):not(.out-of-time) .tap-hint {
+    .tap-hint.visible {
       opacity: 0.85;
     }
 
@@ -1082,6 +1082,20 @@ function render() {
   // Main button
   const btnMap = { idle: '▶', running: '⏸\uFE0E', paused: '▶', ended: '↺' };
   mainBtn.textContent = btnMap[state.phase] || '▶';
+
+  // Tap hints
+  const topHint = document.querySelector('#player-top .tap-hint');
+  const botHint = document.querySelector('#player-bottom .tap-hint');
+  topHint.classList.remove('visible');
+  botHint.classList.remove('visible');
+  if (state.phase === 'idle') {
+    topHint.textContent = 'TAP TO START';
+    topHint.classList.add('visible');
+  } else if (state.phase === 'running') {
+    const hint = state.activePlayer === 'top' ? topHint : botHint;
+    hint.textContent = 'TAP TO TOGGLE';
+    hint.classList.add('visible');
+  }
 
   // Move counts
   document.getElementById('moves-top').textContent =
